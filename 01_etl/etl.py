@@ -27,6 +27,7 @@ def transfer_data(pg_conn):
     for movies in pg_loader.get_movies_from_database(status.get_status('mod_date')):
         print(len(movies))
 
+    status.disconnect()
     return
 
 if __name__ == '__main__':

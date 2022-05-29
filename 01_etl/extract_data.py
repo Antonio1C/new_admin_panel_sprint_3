@@ -7,7 +7,7 @@ class PGLoader:
     def __init__(self, conn: connection) -> None:
         self.conn = conn
     
-    def __get_query_template():
+    def __get_query_template(self):
         return '''
         SELECT
             fw.id,
@@ -32,7 +32,7 @@ class PGLoader:
         LEFT JOIN content.person AS p ON p.id = pfw.person_id
         LEFT JOIN content.genre_film_work AS gfw ON gfw.film_work_id = fw.id
         LEFT JOIN content.genre AS g ON g.id = gfw.genre_id
-        WHERE fw.id IN ({})
+        WHERE fw.id IN {}
         GROUP BY fw.id
         ORDER BY fw.modified;'''
 
@@ -54,7 +54,7 @@ class PGLoader:
         cur = self.conn.cursor()
         sql_query = '''
             SELECT fw.id AS id
-            FROM content.filmwork fw
+            FROM content.film_work fw
             '''
         
         if mod_date is None:
