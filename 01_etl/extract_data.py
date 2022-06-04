@@ -1,12 +1,57 @@
+import psycopg2
+import os
+
 from datetime import datetime
-from psycopg2.extensions import connection
-from status import Status
+from psycopg2.extensions import connection as _connection
+from psycopg2.extras import DictCursor
+from contextlib import contextmanager
+from backoff import backoff
+
 
 class PGLoader:
 
-    def __init__(self, conn: connection) -> None:
-        self.conn = conn
-    
+    def __init__(self) -> None:
+        pass
+
+    def get_movies_from_database(self, mod_date: datetime):
+        with self.__pg_connect() as conn, self.__pg_cursor(conn) as cur:
+            sql_query_templ = self.__get_query_template()
+            for fw_ids in self.__get_changes(cur, mod_date):
+
+                if not fw_ids: break
+
+                sql_query = sql_query_templ.format(tuple(fw_ids))
+                cur.execute(sql_query)
+                yield cur.fetchall()
+        
+    @contextmanager
+    def __pg_connect(self):
+        dsl = {
+            'dbname': os.environ.get('DB_NAME'),
+            'user': os.environ.get('DB_USER'),
+            'password': os.environ.get('DB_PASSWORD'),
+            'host': os.environ.get('DB_HOST', '127.0.0.1'),
+            'port': os.environ.get('DB_PORT', 5432),
+            }
+
+        conn = self.__get_connection(**dsl)
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+    @contextmanager
+    def __pg_cursor(self, conn: _connection):
+        cur = conn.cursor()
+        try:
+            yield cur
+        finally:
+            cur.close()
+
+    @backoff((ConnectionError, ConnectionRefusedError, psycopg2.OperationalError))
+    def __get_connection(self, **dsl):
+        return psycopg2.connect(**dsl, cursor_factory=DictCursor)
+
     def __get_query_template(self):
         return '''
         SELECT
@@ -52,24 +97,8 @@ class PGLoader:
         GROUP BY fw.id
         ORDER BY fw.modified;'''
 
+    def __get_changes(self, cur, mod_date: datetime):
 
-    def get_movies_from_database(self, mod_date: datetime):
-        cur = self.conn.cursor()
-        sql_query_templ = self.__get_query_template()
-        for fw_ids in self.__get_changes(mod_date):
-
-            if not fw_ids: break
-
-            sql_query = sql_query_templ.format(tuple(fw_ids))
-            cur.execute(sql_query)
-            yield cur.fetchall()
-    
-        cur.close()
-        return None
-
-    def __get_changes(self, mod_date: datetime):
-
-        cur = self.conn.cursor()
         sql_query = '''
             SELECT fw.id AS id
             FROM content.film_work fw
@@ -102,15 +131,9 @@ class PGLoader:
             result = cur.fetchmany(500)
 
             if not result:
-                cur.close()
                 return []
 
             for row in result:
                 fw_ids.append(row['id'])
             
             yield fw_ids
-
-        
-
-
-
