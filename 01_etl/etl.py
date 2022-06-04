@@ -1,6 +1,10 @@
+from typing import List
+import uuid
 from dotenv import load_dotenv
 import os
+from elasticsearch import Elasticsearch, helpers
 import psycopg2
+import requests
 
 
 from psycopg2.extensions import connection as _connection
@@ -10,6 +14,30 @@ from status import Status
 
 from contextlib import contextmanager
 
+from dataclasses import dataclass, fields, field
+from pydantic import BaseModel
+
+@dataclass
+class DataES:
+    id: uuid.UUID
+    imdb_rating: int
+    genre: list[str]
+    title: str
+    description: str
+    director: str
+    actors_names: list[str]
+    writers_names: list[str]
+    writers: list[dict]
+    actors: list[dict]
+
+def get_fields(data_type: type) -> list:
+    return [fld.name for fld in fields(data_type)]
+
+def get_persons_list(persons: list[dict]) -> list[dict]:
+    return [
+        {'id': person['id'], 'name': person['name']} \
+            for person in persons
+    ]
 
 @contextmanager
 def pg_context(**dsl):
@@ -20,12 +48,31 @@ def pg_context(**dsl):
         conn.close()
 
 
-def transfer_data(pg_conn):
+def generate_data(movies_list):
+    persons_fields = ['actors', 'writers']
+    for movie in movies_list:
+        doc = {}
+        for fld_name in get_fields(DataES):
+            if fld_name in persons_fields:
+                doc[fld_name] = get_persons_list(movie[fld_name])
+            else: doc[fld_name] = movie[fld_name]
+
+        # print(doc)
+        yield {
+            '_index': 'movies',
+            '_id': movie['id'],
+            **doc,
+        }
+
+
+def transfer_data(pg_conn: _connection):
     pg_loader = PGLoader(pg_conn)
     status = Status()
     status.connect()
+
+    es_client = Elasticsearch('http://localhost:9200/')
     for movies in pg_loader.get_movies_from_database(status.get_status('mod_date')):
-        print(len(movies))
+        helpers.bulk(es_client, generate_data(movies))
 
     status.disconnect()
     return

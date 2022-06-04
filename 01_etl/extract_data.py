@@ -11,22 +11,38 @@ class PGLoader:
         return '''
         SELECT
             fw.id,
+            fw.rating AS imdb_rating,
+            ARRAY_AGG(DISTINCT g.name) as genre,
             fw.title,
             fw.description,
-            fw.rating,
-            fw.type,
-            fw.modified,
+            ARRAY_AGG(DISTINCT p.full_name) FILTER (
+                WHERE pfw.role = 'director'
+            ) AS director,
+            ARRAY_AGG(DISTINCT p.full_name) FILTER (
+                WHERE pfw.role = 'actor'
+            ) AS actors_names,
+            ARRAY_AGG(DISTINCT p.full_name) FILTER (
+                WHERE pfw.role = 'writer'
+            ) AS writers_names,
             COALESCE (
                 json_agg(
                     DISTINCT jsonb_build_object(
-                        'person_role', pfw.role,
-                        'person_id', p.id,
-                        'person_name', p.full_name
+                        'id', p.id,
+                        'name', p.full_name
                     )
-                ) FILTER (WHERE p.id is not null),
+                ) FILTER (WHERE pfw.role = 'actor'),
                 '[]'
-            ) as persons,
-            array_agg(DISTINCT g.name) as genres
+            ) as actors,
+            COALESCE (
+                json_agg(
+                    DISTINCT jsonb_build_object(
+                        'id', p.id,
+                        'name', p.full_name
+                    )
+                ) FILTER (WHERE pfw.role = 'writer'),
+                '[]'
+            ) as writers,
+            fw.modified
         FROM content.film_work AS fw
         LEFT JOIN content.person_film_work AS pfw ON pfw.film_work_id = fw.id
         LEFT JOIN content.person AS p ON p.id = pfw.person_id
@@ -36,20 +52,22 @@ class PGLoader:
         GROUP BY fw.id
         ORDER BY fw.modified;'''
 
+
     def get_movies_from_database(self, mod_date: datetime):
         cur = self.conn.cursor()
-        for fw_ids in self.get_changes(mod_date):
+        sql_query_templ = self.__get_query_template()
+        for fw_ids in self.__get_changes(mod_date):
 
             if not fw_ids: break
 
-            sql_query = self.__get_query_template().format(tuple(fw_ids))
+            sql_query = sql_query_templ.format(tuple(fw_ids))
             cur.execute(sql_query)
             yield cur.fetchall()
     
         cur.close()
         return None
 
-    def get_changes(self, mod_date: datetime):
+    def __get_changes(self, mod_date: datetime):
 
         cur = self.conn.cursor()
         sql_query = '''
@@ -86,7 +104,7 @@ class PGLoader:
             if not result:
                 cur.close()
                 return []
-            
+
             for row in result:
                 fw_ids.append(row['id'])
             
