@@ -16,6 +16,7 @@ class Status():
         self.__redis_db.close()
 
     def get_status(self, key) -> Any:
+        self.__redis_db.set_response_callback('GET', float)
         return self.__redis_db.get(key)
 
     def set_status(self, key: str, value: Any) -> None:

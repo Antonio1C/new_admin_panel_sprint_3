@@ -107,21 +107,21 @@ class PGLoader:
         if mod_date is None:
             sql_query += ';'
         else:
-            sql_query += f'WHERE fw.modified > {mod_date}'
+            sql_query += f'WHERE fw.modified > \'{mod_date}\''
             sql_query += ('''
                 UNION
                 SELECT pfw.film_work_id
                 FROM content.person_film_work AS pfw
                 WHERE pfw.person_id IN (SELECT p.id
                     FROM content.person AS p
-                    WHERE p.modified > ''' + f'{mod_date})' + '''
+                    WHERE p.modified >\'''' + f'{mod_date}\')' + '''
                 
                 UNION
-                SELECT 
+                SELECT gfw.film_work_id
                 FROM content.genre_film_work AS gfw
                 WHERE gfw.genre_id IN (SELECT g.id
                     FROM content.genre AS g
-                    WHERE g.modified > ''' + f'{mod_date});')
+                    WHERE g.modified >\'''' + f'{mod_date}\');')
         
         cur.execute(sql_query)
 

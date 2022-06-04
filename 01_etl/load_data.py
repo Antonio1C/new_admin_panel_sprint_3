@@ -20,7 +20,7 @@ class ESLoader:
     
     @backoff((ConnectionError, ))
     def __check_connection(self):
-        if not self.client.ping():
+        if not self.__client.ping():
             raise ConnectionError
 
     def __get_fields(self) -> list:
@@ -49,7 +49,7 @@ class ESLoader:
             doc = {}
             for fld_name in self.__get_fields():
                 if fld_name in persons_fields:
-                    doc[fld_name] = self.__get_persons_list(self, movie[fld_name])
+                    doc[fld_name] = self.__get_persons_list(movie[fld_name])
                 elif fld_name == 'director' and movie[fld_name] is None:
                     doc[fld_name] = []
                 else: doc[fld_name] = movie[fld_name]
