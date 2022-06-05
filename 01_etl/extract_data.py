@@ -18,7 +18,8 @@ class PGLoader:
             sql_query_templ = self.__get_query_template()
             for fw_ids in self.__get_changes(cur, mod_date):
 
-                if not fw_ids: break
+                if not fw_ids:
+                    break
 
                 sql_query = sql_query_templ.format(tuple(fw_ids))
                 cur.execute(sql_query)

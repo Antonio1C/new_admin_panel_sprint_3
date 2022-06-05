@@ -4,7 +4,7 @@ from typing import Any
 from redis import Redis
 from dotenv import load_dotenv
 
-class Status():
+class Status:
 
     def connect(self) -> None:
         load_dotenv()
@@ -17,7 +17,7 @@ class Status():
 
     def get_status(self, key) -> Any:
         value = self.__redis_db.get(key)
-        return value if value is None else float(value)
+        return float(value) if value else value
 
     def set_status(self, key: str, value: Any) -> None:
         self.__redis_db.set(key, value=value)

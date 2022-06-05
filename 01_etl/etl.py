@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from extract_data import PGLoader
 from load_data import ESLoader
 from status import Status
-from datetime import datetime, timezone
+from datetime import datetime
 import time
 
 
@@ -14,7 +14,7 @@ def transfer_data():
     status.connect()
 
     mod_date = status.get_status('mod_date')
-    if not mod_date is None: mod_date = datetime.fromtimestamp(mod_date)
+    mod_date = datetime.fromtimestamp(mod_date) if mod_date else None
 
     new_date = time.time()
 
