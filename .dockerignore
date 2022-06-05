@@ -1,0 +1,8 @@
+# .flake settings
+01_etl/.flake8
+
+# python cache files
+01_etl/__pycache__
+
+# virtual environment
+01_etl/venv

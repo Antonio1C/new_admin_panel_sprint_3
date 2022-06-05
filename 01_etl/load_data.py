@@ -8,18 +8,18 @@ class ESLoader:
     def __init__(self) -> None:
         hosts = [
             {
-                'host': os.environ.get('HOST_ES', 'localhost'),
-                'port': os.environ.get('PORT_ES', 9200),
+                'host': os.environ.get('ES_HOST', 'localhost'),
+                'port': int(os.environ.get('ES_PORT', 9200)),
             }
         ]
         self.__client = Elasticsearch(hosts=hosts)
 
-    def save_data(self, data):
+    def save_data(self, data) -> None:
         self.__check_connection()
         helpers.bulk(self.__client, self.__generate_data(data))
     
     @backoff((ConnectionError, ))
-    def __check_connection(self):
+    def __check_connection(self) -> None:
         if not self.__client.ping():
             raise ConnectionError
 

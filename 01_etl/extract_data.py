@@ -11,7 +11,7 @@ from backoff import backoff
 class PGLoader:
 
     def __init__(self) -> None:
-        pass
+        self.pack_size = int(os.environ.get('PACK_SIZE', 200))
 
     def get_movies_from_database(self, mod_date: datetime):
         with self.__pg_connect() as conn, self.__pg_cursor(conn) as cur:
@@ -31,7 +31,7 @@ class PGLoader:
             'user': os.environ.get('DB_USER'),
             'password': os.environ.get('DB_PASSWORD'),
             'host': os.environ.get('DB_HOST', '127.0.0.1'),
-            'port': os.environ.get('DB_PORT', 5432),
+            'port': int(os.environ.get('DB_PORT', 5432)),
             }
 
         conn = self.__get_connection(**dsl)
@@ -128,7 +128,7 @@ class PGLoader:
         fw_ids = []
         while True:
             fw_ids.clear()
-            result = cur.fetchmany(500)
+            result = cur.fetchmany(self.pack_size)
 
             if not result:
                 return []
