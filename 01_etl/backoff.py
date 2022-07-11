@@ -1,18 +1,16 @@
 import logging
 from functools import wraps
 from time import sleep
-from typing import Callable
+from typing import Callable, Tuple
 
 _logger = logging.getLogger(__name__)
 
 def backoff(
-    exceptions: tuple[Exception],
+    exceptions: Tuple[Exception],
     start_sleep_time=0.1,
     factor=2,
     border_sleep_time=10,
-    except_logger: Callable[[], None] = lambda: _logger.exception(
-        "Connection error"
-    )
+    except_logger: Callable[[], None] = None
 ):
     """
     Функция для повторного выполнения функции через некоторое время, если возникла ошибка.
@@ -29,6 +27,8 @@ def backoff(
     """
 
     sleep_time = start_sleep_time
+    if not except_logger:
+        except_logger = lambda: _logger.exception("Connection error")
 
     def func_wrapper(func):
 
@@ -39,7 +39,6 @@ def backoff(
                 try:
                     return func(*args, **kwargs)
                 except exceptions:
-                # except:
                     except_logger()
 
                 sleep_time = (sleep_time * factor) \

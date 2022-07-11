@@ -61,14 +61,20 @@ class PGLoader:
             ARRAY_AGG(DISTINCT g.name) as genre,
             fw.title,
             fw.description,
-            ARRAY_AGG(DISTINCT p.full_name) FILTER (
-                WHERE pfw.role = 'director'
+            COALESCE (
+                ARRAY_AGG(DISTINCT p.full_name) FILTER (
+                    WHERE pfw.role = 'director'),
+                '{{}}'
             ) AS director,
-            ARRAY_AGG(DISTINCT p.full_name) FILTER (
-                WHERE pfw.role = 'actor'
+            COALESCE (
+                ARRAY_AGG(DISTINCT p.full_name) FILTER (
+                    WHERE pfw.role = 'actor'),
+                '{{}}'
             ) AS actors_names,
-            ARRAY_AGG(DISTINCT p.full_name) FILTER (
-                WHERE pfw.role = 'writer'
+            COALESCE (
+                ARRAY_AGG(DISTINCT p.full_name) FILTER (
+                    WHERE pfw.role = 'writer'),
+                '{{}}'
             ) AS writers_names,
             COALESCE (
                 json_agg(

@@ -1,8 +1,22 @@
 import os
+from typing import Dict, List
 from elasticsearch import Elasticsearch, helpers
+
+from pydantic import BaseModel
 
 from backoff import backoff
 
+class Movie(BaseModel):
+    id: str
+    imdb_rating: float | None
+    genre: List[str]
+    title: str
+    description: str | None
+    director: List[str]
+    actors_names: List[str]
+    writers_names: List[str]
+    writers: Dict
+    actors: Dict
 
 class ESLoader:
     def __init__(self) -> None:
@@ -46,16 +60,12 @@ class ESLoader:
     def __generate_data(self, movies_list):
         persons_fields = ['actors', 'writers']
         for movie in movies_list:
-            doc = {}
-            for fld_name in self.__get_fields():
-                if fld_name in persons_fields:
-                    doc[fld_name] = self.__get_persons_list(movie[fld_name])
-                elif fld_name == 'director' and movie[fld_name] is None:
-                    doc[fld_name] = []
-                else: doc[fld_name] = movie[fld_name]
+            doc = Movie(**movie)
+            doc.writers = self.__get_persons_list(movie['writers'])
+            doc.actors = self.__get_persons_list(movie['actors'])
 
             yield {
                 '_index': 'movies',
                 '_id': movie['id'],
-                **doc,
+                **doc.dict(),
             }
